@@ -115,6 +115,50 @@ impl<'a> DnspodClient<'a> {
             }
         }
     }
+
+    async fn create_acme_challenge_record<S: AsRef<str>, T: AsRef<str>>(
+        &self,
+        domain: S,
+        proof: T,
+    ) -> Result<()> {
+        #[derive(Serialize)]
+        struct Params<'a, 'b, 'c> {
+            login_token: &'a str,
+            format: &'static str,
+            domain: &'b str,
+            sub_domain: &'static str,
+            record_type: &'static str,
+            record_line: &'static str, // wtf this is mandatory
+            value: &'c str,
+        }
+
+        let params = Params {
+            login_token: &self.login_token,
+            format: "json",
+            domain: domain.as_ref(),
+            sub_domain: ACME_CHALLENGE_SUBDOMAIN,
+            record_type: "TXT",
+            record_line: "默认",
+            value: proof.as_ref(),
+        };
+
+        let resp = self.client
+            .post(self.api_host.join("Record.Create").unwrap())
+            .form(&params)
+            .send()
+            .await?
+            .json::<DnspodRespRecordCreate>()
+            .await?;
+
+
+        match resp.status.try_parse_err() {
+            Ok(_) => {
+                debug!("record created: {:?}", resp.record.unwrap());
+                Ok(())
+            }
+            Err(e) => Err(Box::new(e)),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -156,6 +200,12 @@ impl DnspodRespStatus {
             }),
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct DnspodRespRecordCreate {
+    status: DnspodRespStatus,
+    record: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -206,6 +256,24 @@ async fn main() -> Result<()> {
 
     let records = dnspod.list_acme_txt_records(&args.domain).await?;
     debug!("records = {:?}", records);
+
+    if args.clean {
+        // remove the challenge record
+        if records.len() == 0 {
+            info!("nothing to clean");
+            return Ok(());
+        }
+
+        todo!();
+    } else {
+        // TODO: handle the case that one record is already existing
+        if records.len() > 0 {
+            todo!();
+        }
+
+        // add one record
+        dnspod.create_acme_challenge_record(&args.domain, &args.proof).await?;
+    }
 
     Ok(())
 }
