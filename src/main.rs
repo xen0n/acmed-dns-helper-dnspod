@@ -1,5 +1,6 @@
-use log::info;
+use log::{debug, info};
 use structopt::StructOpt;
+use serde_derive::{Deserialize, Serialize};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -67,6 +68,7 @@ struct DnspodClient<'a> {
 }
 
 const DEFAULT_API_HOST: &str = "https://dnsapi.cn";
+const ACME_CHALLENGE_SUBDOMAIN: &str = "_acme-challenge";
 
 impl<'a> DnspodClient<'a> {
     fn new(client: &'a reqwest::Client, creds: &DnspodCredentials) -> Self {
@@ -78,6 +80,70 @@ impl<'a> DnspodClient<'a> {
             api_host: DEFAULT_API_HOST.parse().unwrap(),
         }
     }
+
+    async fn list_acme_txt_records<'s, S: AsRef<str>>(&'s self, domain: S) -> Result<DnspodRespRecordList> {
+        #[derive(Serialize)]
+        struct Params<'a, 'b> {
+            login_token: &'a str,
+            format: &'static str,
+            domain: &'b str,
+            sub_domain: &'static str,
+            record_type: &'static str,
+        }
+
+        let params = Params {
+            login_token: &self.login_token,
+            format: "json",
+            domain: domain.as_ref(),
+            sub_domain: ACME_CHALLENGE_SUBDOMAIN,
+            record_type: "TXT",
+        };
+
+        let resp = self.client
+            .post(self.api_host.join("Record.List").unwrap())
+            .form(&params)
+            .send()
+            .await?
+            .json::<DnspodRespRecordList>()
+            .await?;
+
+        Ok(resp)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct DnspodRespStatus {
+    code: String,
+    message: String,
+    created_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct DnspodRespRecordList {
+    status: DnspodRespStatus,
+    // domain: DnspodRespDomain,
+    // info: DnspodRespInfo,
+    records: Option<Vec<DnspodRespRecord>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DnspodRespRecord {
+    id: String,
+    ttl: String,
+    value: String,
+    enabled: String,
+    status: String,
+    updated_on: String,
+    name: String,
+    line: String,
+    line_id: String,
+    #[serde(rename = "type")]
+    typ: String,
+    weight: Option<String>,
+    monitor_status: String,
+    remark: String,
+    use_aqb: String,
+    mx: String,
 }
 
 #[tokio::main]
@@ -96,7 +162,10 @@ async fn main() -> Result<()> {
         .user_agent(dnspod_ua)
         .build()?;
 
-    let _dnspod = DnspodClient::new(&http, &dnspod_creds);
+    let dnspod = DnspodClient::new(&http, &dnspod_creds);
+
+    let records = dnspod.list_acme_txt_records(&args.domain).await?;
+    debug!("records = {:?}", records);
 
     Ok(())
 }
