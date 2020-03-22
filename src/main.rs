@@ -1,6 +1,6 @@
 use log::{debug, info};
-use structopt::StructOpt;
 use serde_derive::{Deserialize, Serialize};
+use structopt::StructOpt;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -81,7 +81,10 @@ impl<'a> DnspodClient<'a> {
         }
     }
 
-    async fn list_acme_txt_records<'s, S: AsRef<str>>(&'s self, domain: S) -> Result<Vec<DnspodRespRecord>> {
+    async fn list_acme_txt_records<'s, S: AsRef<str>>(
+        &'s self,
+        domain: S,
+    ) -> Result<Vec<DnspodRespRecord>> {
         #[derive(Serialize)]
         struct Params<'a, 'b> {
             login_token: &'a str,
@@ -99,7 +102,8 @@ impl<'a> DnspodClient<'a> {
             record_type: "TXT",
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(self.api_host.join("Record.List").unwrap())
             .form(&params)
             .send()
@@ -112,7 +116,7 @@ impl<'a> DnspodClient<'a> {
             Err(e) => match e.code {
                 10 => Ok(vec![]),
                 _ => Err(Box::new(e)),
-            }
+            },
         }
     }
 
@@ -142,14 +146,14 @@ impl<'a> DnspodClient<'a> {
             value: proof.as_ref(),
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(self.api_host.join("Record.Create").unwrap())
             .form(&params)
             .send()
             .await?
             .json::<DnspodRespRecordCreate>()
             .await?;
-
 
         match resp.status.try_parse_err() {
             Ok(_) => {
@@ -160,11 +164,7 @@ impl<'a> DnspodClient<'a> {
         }
     }
 
-    async fn remove_domain_record<S: AsRef<str>>(
-        &self,
-        domain: S,
-        record_id: i64,
-    ) -> Result<()> {
+    async fn remove_domain_record<S: AsRef<str>>(&self, domain: S, record_id: i64) -> Result<()> {
         #[derive(Serialize)]
         struct Params<'a, 'b> {
             login_token: &'a str,
@@ -180,7 +180,8 @@ impl<'a> DnspodClient<'a> {
             record_id: record_id,
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(self.api_host.join("Record.Remove").unwrap())
             .form(&params)
             .send()
@@ -210,12 +211,7 @@ struct DnspodError {
 
 impl std::fmt::Display for DnspodError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "DnspodError({}, \"{}\")",
-            self.code,
-            self.message,
-        )
+        write!(f, "DnspodError({}, \"{}\")", self.code, self.message,)
     }
 }
 
@@ -310,7 +306,9 @@ async fn main() -> Result<()> {
                 continue;
             }
 
-            dnspod.remove_domain_record(&args.domain, r.id.parse()?).await?;
+            dnspod
+                .remove_domain_record(&args.domain, r.id.parse()?)
+                .await?;
             info!("removed record: {:?}", r);
         }
     } else {
@@ -328,7 +326,9 @@ async fn main() -> Result<()> {
         }
 
         // add one record
-        dnspod.create_acme_challenge_record(&args.domain, &args.proof).await?;
+        dnspod
+            .create_acme_challenge_record(&args.domain, &args.proof)
+            .await?;
     }
 
     Ok(())
