@@ -266,8 +266,16 @@ async fn main() -> Result<()> {
 
         todo!();
     } else {
-        // TODO: handle the case that one record is already existing
         if records.len() > 0 {
+            // TODO: doesn't handle enabled status or multiple records yet
+            for r in records {
+                if r.value == args.proof {
+                    info!("a matching record is already present");
+                    return Ok(());
+                }
+            }
+
+            // no matching record
             todo!();
         }
 
