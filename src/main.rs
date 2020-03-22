@@ -107,6 +107,8 @@ impl<'a> DnspodClient<'a> {
             .json::<DnspodRespRecordList>()
             .await?;
 
+        resp.status.try_parse_err()?;
+
         Ok(resp)
     }
 }
@@ -116,6 +118,39 @@ struct DnspodRespStatus {
     code: String,
     message: String,
     created_at: String,
+}
+
+#[derive(Debug)]
+struct DnspodError {
+    code: i64,
+    message: String,
+}
+
+impl std::fmt::Display for DnspodError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "DnspodError({}, \"{}\")",
+            self.code,
+            self.message,
+        )
+    }
+}
+
+// this is rooted directly in the response so no source
+impl std::error::Error for DnspodError {}
+
+impl DnspodRespStatus {
+    fn try_parse_err(&self) -> Result<()> {
+        let errcode = self.code.parse()?;
+        match errcode {
+            1 => Ok(()),
+            _ => Err(Box::new(DnspodError {
+                code: errcode,
+                message: self.message.clone(),
+            })),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
