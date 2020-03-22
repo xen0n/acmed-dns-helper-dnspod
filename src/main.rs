@@ -81,7 +81,7 @@ impl<'a> DnspodClient<'a> {
         }
     }
 
-    async fn list_acme_txt_records<'s, S: AsRef<str>>(&'s self, domain: S) -> Result<DnspodRespRecordList> {
+    async fn list_acme_txt_records<'s, S: AsRef<str>>(&'s self, domain: S) -> Result<Vec<DnspodRespRecord>> {
         #[derive(Serialize)]
         struct Params<'a, 'b> {
             login_token: &'a str,
@@ -107,9 +107,13 @@ impl<'a> DnspodClient<'a> {
             .json::<DnspodRespRecordList>()
             .await?;
 
-        resp.status.try_parse_err()?;
-
-        Ok(resp)
+        match resp.status.try_parse_err() {
+            Ok(_) => Ok(resp.records.unwrap()),
+            Err(e) => match e.code {
+                10 => Ok(vec![]),
+                _ => Err(Box::new(e)),
+            }
+        }
     }
 }
 
@@ -141,14 +145,15 @@ impl std::fmt::Display for DnspodError {
 impl std::error::Error for DnspodError {}
 
 impl DnspodRespStatus {
-    fn try_parse_err(&self) -> Result<()> {
-        let errcode = self.code.parse()?;
+    fn try_parse_err(&self) -> std::result::Result<(), DnspodError> {
+        // XXX fix this unwrap
+        let errcode = self.code.parse().unwrap();
         match errcode {
             1 => Ok(()),
-            _ => Err(Box::new(DnspodError {
+            _ => Err(DnspodError {
                 code: errcode,
                 message: self.message.clone(),
-            })),
+            }),
         }
     }
 }
