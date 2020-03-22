@@ -29,6 +29,10 @@ acmed-dns-helper-dnspod --domain "<domain name>" --proof "<proof>"
 acmed-dns-helper-dnspod --domain "<domain name>" --proof "<proof>" --clean
 ```
 
+## Code quality sux!
+
+I know, but I'm not in a mood to make a full-fledged SDK for DNSPod, that's all.
+At least #itworks#...
 
 ## License
 

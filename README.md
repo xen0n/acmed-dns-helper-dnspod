@@ -30,6 +30,10 @@ acmed-dns-helper-dnspod --domain "<domain name>" --proof "<proof>"
 acmed-dns-helper-dnspod --domain "<domain name>" --proof "<proof>" --clean
 ```
 
+## 代码质量好烂！
+
+我知道，懒得改了，现在没闲情逸致做一个真正的 DNSPod SDK，就先这样吧 #又不是不能用#……
+
 ## License
 
 Apache-2.0
