@@ -159,6 +159,40 @@ impl<'a> DnspodClient<'a> {
             Err(e) => Err(Box::new(e)),
         }
     }
+
+    async fn remove_domain_record<S: AsRef<str>>(
+        &self,
+        domain: S,
+        record_id: i64,
+    ) -> Result<()> {
+        #[derive(Serialize)]
+        struct Params<'a, 'b> {
+            login_token: &'a str,
+            format: &'static str,
+            domain: &'b str,
+            record_id: i64,
+        }
+
+        let params = Params {
+            login_token: &self.login_token,
+            format: "json",
+            domain: domain.as_ref(),
+            record_id: record_id,
+        };
+
+        let resp = self.client
+            .post(self.api_host.join("Record.Remove").unwrap())
+            .form(&params)
+            .send()
+            .await?
+            .json::<DnspodRespRecordRemove>()
+            .await?;
+
+        match resp.status.try_parse_err() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Box::new(e)),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -206,6 +240,11 @@ impl DnspodRespStatus {
 struct DnspodRespRecordCreate {
     status: DnspodRespStatus,
     record: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DnspodRespRecordRemove {
+    status: DnspodRespStatus,
 }
 
 #[derive(Debug, Deserialize)]
@@ -264,7 +303,16 @@ async fn main() -> Result<()> {
             return Ok(());
         }
 
-        todo!();
+        // TODO: remove all records?
+        for r in records {
+            if r.value != args.proof {
+                debug!("ignoring record with different proof value: {:?}", r);
+                continue;
+            }
+
+            dnspod.remove_domain_record(&args.domain, r.id.parse()?).await?;
+            info!("removed record: {:?}", r);
+        }
     } else {
         if records.len() > 0 {
             // TODO: doesn't handle enabled status or multiple records yet
