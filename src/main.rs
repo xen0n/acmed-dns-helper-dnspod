@@ -1,6 +1,8 @@
 use log::info;
 use structopt::StructOpt;
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "acmed-dns-helper-dnspod")]
 struct Args {
@@ -19,7 +21,7 @@ struct DnspodCredentials {
 }
 
 impl DnspodCredentials {
-    fn try_from_env() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    fn try_from_env() -> Result<Self> {
         use std::env;
 
         Ok(Self {
@@ -39,7 +41,7 @@ struct DnspodUserAgent {
 }
 
 impl DnspodUserAgent {
-    fn try_from_env() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    fn try_from_env() -> Result<Self> {
         Ok(Self {
             contact_email: std::env::var("DNSPOD_CONTACT_EMAIL")?,
         })
@@ -79,7 +81,7 @@ impl<'a> DnspodClient<'a> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<()> {
     env_logger::init();
 
     let args = Args::from_args();
