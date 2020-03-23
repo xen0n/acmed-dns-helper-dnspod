@@ -1,3 +1,5 @@
+# reproducible builds
+/ci-build
 
 # Created by https://www.gitignore.io/api/vim,rust,linux,macos,emacs,windows,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=vim,rust,linux,macos,emacs,windows,visualstudiocode
