@@ -50,7 +50,7 @@ impl DnspodUserAgent {
 
     fn to_ua_string(&self) -> String {
         // XXX: get version from Cargo.toml
-        format!("acmed-dns-helper-dnspod/0.1.0 ({})", self.contact_email)
+        format!("acmed-dns-helper-dnspod/0.2.0 ({})", self.contact_email)
     }
 }
 
