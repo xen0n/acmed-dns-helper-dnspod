@@ -81,8 +81,8 @@ impl<'a> DnspodClient<'a> {
         }
     }
 
-    async fn list_acme_txt_records<'s, S: AsRef<str>>(
-        &'s self,
+    async fn list_acme_txt_records<S: AsRef<str>>(
+        &self,
         domain: S,
     ) -> Result<Vec<DnspodRespRecord>> {
         #[derive(Serialize)]
@@ -211,7 +211,7 @@ struct DnspodError {
 
 impl std::fmt::Display for DnspodError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "DnspodError({}, \"{}\")", self.code, self.message,)
+        write!(f, "DnspodError({}, \"{}\")", self.code, self.message)
     }
 }
 
