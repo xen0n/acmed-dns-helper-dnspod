@@ -329,6 +329,13 @@ async fn main() -> Result<()> {
         dnspod
             .create_acme_challenge_record(&args.domain, &args.proof)
             .await?;
+
+        // sleep for a while, because dnspod modifications tend to take a while
+        // to be noticed by letsencrypt server which apparently is a bit distanced
+        // from China
+        info!("dnspod operation successful, wait a bit before return");
+        ::futures_timer::Delay::new(std::time::Duration::from_secs(5)).await;
+        info!("okay, hope things are set!");
     }
 
     Ok(())
