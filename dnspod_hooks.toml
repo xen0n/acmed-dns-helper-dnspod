@@ -1,0 +1,30 @@
+[[hook]]
+name = "dns-01-dnspod-add"
+type = ["challenge-dns-01"]
+cmd = "acmed-dns-helper-dnspod"
+args = [
+	"--domain",
+	"{{domain}}",
+	"--proof",
+	"{{proof}}",
+]
+
+[[hook]]
+name = "dns-01-dnspod-clean"
+type = ["challenge-dns-01-clean"]
+cmd = "acmed-dns-helper-dnspod"
+args = [
+	"--domain",
+	"{{domain}}",
+	"--proof",
+	"{{proof}}",
+	"--clean",
+]
+allow_failure = true
+
+[[group]]
+name = "dns-01-dnspod"
+hooks = [
+    "dns-01-dnspod-add",
+    "dns-01-dnspod-clean"
+]

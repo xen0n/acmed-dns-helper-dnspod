@@ -20,9 +20,42 @@ Translation: [English](README.en.md)
 
 不提供正确的 `User-Agent` 貌似也行（最初的 API 测试是用简单的 `curl` 命令进行的），不过做人最好礼貌一点，所以 Email 的部分也做成了必须的。
 
+## 编译
+
+`cargo b --release` 可以用，但生成的二进制在 Linux 平台上会动态链接到系统 OpenSSL，可能导致可移植性问题。
+这种情况下你可以使用 `make rel` 编译一个静态链接的二进制（需要 Docker）。
+
 ## Usage
 
+注意：以下均假定 `acmed-dns-helper-dnspod` 二进制已经放在 `$PATH` 下。
+
+### For ACMEd
+
+首先在你的 `acmed.toml` 里 `include` 本项目提供的 `dnspod_hooks.toml`，
+然后配置相应的 `[[certificate]]` 项：
+
+```toml
+[[certificate]]
+# ...
+hooks = [
+    # ...
+    "dns-01-dnspod",
+    # ...
+]
+
+# 你可以把这些东西写进 certificate section
+# 也可以写到 global section 如果你所有域名都用同一个 token
+[certificate.env]
+DNSPOD_ID = "xxxxx"
+DNSPOD_TOKEN = "xxxxx"
+DNSPOD_CONTACT_EMAIL = "your-dnspod-email-address"
+```
+
+### In shell
+
 ```sh
+# 设置好你的环境变量然后调用
+
 # challenge
 acmed-dns-helper-dnspod --domain "<domain name>" --proof "<proof>"
 
