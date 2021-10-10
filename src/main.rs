@@ -9,7 +9,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>
 struct Args {
     #[structopt(long)]
     domain: String,
-    #[structopt(long)]
+    #[structopt(long, allow_hyphen_values = true)]
     proof: String,
     #[structopt(long)]
     clean: bool,
