@@ -22,8 +22,7 @@ Translation: [English](README.en.md)
 
 ## 编译
 
-`cargo b --release` 可以用，但生成的二进制在 Linux 平台上会动态链接到系统 OpenSSL，可能导致可移植性问题。
-这种情况下你可以使用 `make rel` 编译一个静态链接的二进制（需要 Docker）。
+`cargo b --release` 即可。
 
 ## Usage
 
