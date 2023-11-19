@@ -1,17 +1,17 @@
+use clap::Parser;
 use log::{debug, info};
 use serde_derive::{Deserialize, Serialize};
-use structopt::StructOpt;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "acmed-dns-helper-dnspod")]
+#[derive(Parser, Debug)]
+#[command(name = "acmed-dns-helper-dnspod", version)]
 struct Args {
-    #[structopt(long)]
+    #[arg(long)]
     domain: String,
-    #[structopt(long, allow_hyphen_values = true)]
+    #[arg(long, allow_hyphen_values = true)]
     proof: String,
-    #[structopt(long)]
+    #[arg(long)]
     clean: bool,
 }
 
@@ -275,7 +275,7 @@ struct DnspodRespRecord {
 async fn main() -> Result<()> {
     env_logger::init();
 
-    let args = Args::from_args();
+    let args = Args::parse();
     let dnspod_creds = DnspodCredentials::try_from_env()?;
     let dnspod_ua = DnspodUserAgent::try_from_env()?;
 
