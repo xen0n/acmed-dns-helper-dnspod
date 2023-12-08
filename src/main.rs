@@ -81,16 +81,17 @@ impl<'a> DnspodClient<'a> {
         }
     }
 
-    async fn list_acme_txt_records<S: AsRef<str>>(
+    async fn list_acme_txt_records<S: AsRef<str>, T: AsRef<str>>(
         &self,
         domain: S,
+        subdomain: T,
     ) -> Result<Vec<DnspodRespRecord>> {
         #[derive(Serialize)]
-        struct Params<'a, 'b> {
+        struct Params<'a, 'b, 'c> {
             login_token: &'a str,
             format: &'static str,
             domain: &'b str,
-            sub_domain: &'static str,
+            sub_domain: &'c str,
             record_type: &'static str,
         }
 
@@ -98,7 +99,7 @@ impl<'a> DnspodClient<'a> {
             login_token: &self.login_token,
             format: "json",
             domain: domain.as_ref(),
-            sub_domain: ACME_CHALLENGE_SUBDOMAIN,
+            sub_domain: subdomain.as_ref(),
             record_type: "TXT",
         };
 
@@ -120,27 +121,28 @@ impl<'a> DnspodClient<'a> {
         }
     }
 
-    async fn create_acme_challenge_record<S: AsRef<str>, T: AsRef<str>>(
+    async fn create_acme_challenge_record<S: AsRef<str>, T: AsRef<str>, U: AsRef<str>>(
         &self,
         domain: S,
-        proof: T,
+        subdomain: T,
+        proof: U,
     ) -> Result<()> {
         #[derive(Serialize)]
-        struct Params<'a, 'b, 'c> {
+        struct Params<'a, 'b, 'c, 'd> {
             login_token: &'a str,
             format: &'static str,
             domain: &'b str,
-            sub_domain: &'static str,
+            sub_domain: &'c str,
             record_type: &'static str,
             record_line: &'static str, // wtf this is mandatory
-            value: &'c str,
+            value: &'d str,
         }
 
         let params = Params {
             login_token: &self.login_token,
             format: "json",
             domain: domain.as_ref(),
-            sub_domain: ACME_CHALLENGE_SUBDOMAIN,
+            sub_domain: subdomain.as_ref(),
             record_type: "TXT",
             record_line: "默认",
             value: proof.as_ref(),
@@ -271,6 +273,45 @@ struct DnspodRespRecord {
     mx: String,
 }
 
+/// Returns `(root_domain, challenge_record_name)`.
+fn get_domain_names_to_use(domain: &str) -> (&str, String) {
+    // find the second dot counting from the end
+    if let Some(rightmost_dot_idx) = domain.rfind('.') {
+        if let Some(sep) = domain[0..rightmost_dot_idx].rfind('.') {
+            return (
+                &domain[(sep + 1)..domain.len()],
+                format!("{}.{}", ACME_CHALLENGE_SUBDOMAIN, &domain[0..sep]),
+            );
+        }
+    }
+
+    return (domain, ACME_CHALLENGE_SUBDOMAIN.to_string());
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_get_domain_names_to_use() {
+        use crate::get_domain_names_to_use;
+
+        let (root, challenge_record) = get_domain_names_to_use("example");
+        assert_eq!(root, "example");
+        assert_eq!(challenge_record, "_acme-challenge");
+
+        let (root, challenge_record) = get_domain_names_to_use("example.com");
+        assert_eq!(root, "example.com");
+        assert_eq!(challenge_record, "_acme-challenge");
+
+        let (root, challenge_record) = get_domain_names_to_use("test.example.com");
+        assert_eq!(root, "example.com");
+        assert_eq!(challenge_record, "_acme-challenge.test");
+
+        let (root, challenge_record) = get_domain_names_to_use("foo.bar.example.com");
+        assert_eq!(root, "example.com");
+        assert_eq!(challenge_record, "_acme-challenge.foo.bar");
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
@@ -283,13 +324,19 @@ async fn main() -> Result<()> {
     info!("dnspod creds = {:?}", dnspod_creds);
     info!("dnspod_ua = {:?}", dnspod_ua);
 
+    let (root_domain, challenge_record) = get_domain_names_to_use(&args.domain);
+    info!("root_domain = {:?}", root_domain);
+    info!("challenge_record = {:?}", &challenge_record);
+
     let http = reqwest::ClientBuilder::new()
         .user_agent(dnspod_ua)
         .build()?;
 
     let dnspod = DnspodClient::new(&http, &dnspod_creds);
 
-    let records = dnspod.list_acme_txt_records(&args.domain).await?;
+    let records = dnspod
+        .list_acme_txt_records(root_domain, &challenge_record)
+        .await?;
     debug!("records = {:?}", records);
 
     if args.clean {
@@ -307,7 +354,7 @@ async fn main() -> Result<()> {
             }
 
             dnspod
-                .remove_domain_record(&args.domain, r.id.parse()?)
+                .remove_domain_record(root_domain, r.id.parse()?)
                 .await?;
             info!("removed record: {:?}", r);
         }
@@ -327,7 +374,7 @@ async fn main() -> Result<()> {
 
         // add one record
         dnspod
-            .create_acme_challenge_record(&args.domain, &args.proof)
+            .create_acme_challenge_record(root_domain, &challenge_record, &args.proof)
             .await?;
 
         // sleep for a while, because dnspod modifications tend to take a while
