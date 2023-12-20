@@ -74,6 +74,47 @@ impl Backend for AliyunBackend {
     }
 
     async fn do_provision(&mut self, domain: &str, proof: &str) -> Result<()> {
-        todo!()
+        let params = get_domain_names_to_use(domain);
+        info!("root_domain = {:?}", params.root_domain());
+        info!("challenge_record = {:?}", params.challenge_record_name());
+
+        let records = list_acme_txt_records(
+            &self.client,
+            params.root_domain(),
+            params.challenge_record_name(),
+        )
+        .await?;
+        debug!("records = {:?}", records);
+
+        if records.len() > 0 {
+            // TODO: doesn't handle enabled status or multiple records yet
+            for r in records {
+                if r.value == proof {
+                    info!("a matching record is already present");
+                    return Ok(());
+                }
+            }
+
+            // no matching record
+            todo!();
+        }
+
+        // add one record
+        self.client
+            .add_domain_record(
+                params.root_domain(),
+                params.challenge_record_name(),
+                "TXT",
+                proof,
+            )
+            .await?;
+
+        // sleep for a while, because modifications from inside China tend to
+        // take a while to be noticed by letsencrypt servers
+        info!("aliyun dns operation successful, waiting a bit before return");
+        ::futures_timer::Delay::new(std::time::Duration::from_secs(5)).await;
+        info!("okay, hope things are set!");
+
+        Ok(())
     }
 }
