@@ -31,9 +31,9 @@ async fn main() -> Result<()> {
     info!("dnspod creds = {:?}", dnspod_creds);
     info!("dnspod_ua = {:?}", dnspod_ua);
 
-    let (root_domain, challenge_record) = get_domain_names_to_use(&args.domain);
-    info!("root_domain = {:?}", root_domain);
-    info!("challenge_record = {:?}", &challenge_record);
+    let params = get_domain_names_to_use(&args.domain);
+    info!("root_domain = {:?}", params.root_domain());
+    info!("challenge_record = {:?}", params.challenge_record_name());
 
     let http = reqwest::ClientBuilder::new()
         .user_agent(dnspod_ua)
@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     let dnspod = dnspod::DnspodClient::new(&http, &dnspod_creds);
 
     let records = dnspod
-        .list_acme_txt_records(root_domain, &challenge_record)
+        .list_acme_txt_records(params.root_domain(), params.challenge_record_name())
         .await?;
     debug!("records = {:?}", records);
 
@@ -61,7 +61,7 @@ async fn main() -> Result<()> {
             }
 
             dnspod
-                .remove_domain_record(root_domain, r.id.parse()?)
+                .remove_domain_record(params.root_domain(), r.id.parse()?)
                 .await?;
             info!("removed record: {:?}", r);
         }
@@ -81,7 +81,11 @@ async fn main() -> Result<()> {
 
         // add one record
         dnspod
-            .create_acme_challenge_record(root_domain, &challenge_record, &args.proof)
+            .create_acme_challenge_record(
+                params.root_domain(),
+                params.challenge_record_name(),
+                &args.proof,
+            )
             .await?;
 
         // sleep for a while, because dnspod modifications tend to take a while
