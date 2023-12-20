@@ -17,8 +17,8 @@ enum BackendType {
 #[derive(Parser, Debug)]
 #[command(name = "acmed-dns-helper-dnspod", version)]
 struct Args {
-    #[arg(long, value_enum)]
-    backend: Option<BackendType>,
+    #[arg(long, value_enum, default_value = "dnspod")]
+    backend: BackendType,
     #[arg(long)]
     domain: String,
     #[arg(long, allow_hyphen_values = true)]
@@ -56,8 +56,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     info!("args = {:?}", args);
 
-    let backend_type = args.backend.unwrap_or(BackendType::Dnspod);
-    let mut backend = match backend_type {
+    let mut backend = match args.backend {
         BackendType::Dnspod => BoundBackend::Dnspod(dnspod::DNSPodBackend::new()?),
         BackendType::Aliyun => BoundBackend::Aliyun(aliyun::AliyunBackend::new()?),
     };
