@@ -40,7 +40,7 @@ pub fn get_domain_names_to_use(domain: &str) -> RootDomainAndChallengeRecord {
 mod tests {
     #[test]
     fn test_get_domain_names_to_use() {
-        use crate::get_domain_names_to_use;
+        use super::get_domain_names_to_use;
 
         let result = get_domain_names_to_use("example");
         assert_eq!(result.root_domain(), "example");
