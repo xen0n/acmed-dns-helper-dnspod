@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::defs::ACME_CHALLENGE_SUBDOMAIN;
+const ACME_CHALLENGE_SUBDOMAIN: &str = "_acme-challenge";
 
 pub struct RootDomainAndChallengeRecord<'a> {
     root_domain: &'a str,
