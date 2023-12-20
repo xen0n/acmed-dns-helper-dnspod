@@ -10,14 +10,14 @@ use defs::*;
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum BackendType {
-    DNSPod,
+    Dnspod,
     Aliyun,
 }
 
 #[derive(Parser, Debug)]
 #[command(name = "acmed-dns-helper-dnspod", version)]
 struct Args {
-    #[arg(value_enum)]
+    #[arg(long, value_enum)]
     backend: Option<BackendType>,
     #[arg(long)]
     domain: String,
@@ -29,21 +29,21 @@ struct Args {
 
 // workaround the fact that trait Backend isn't object-safe
 enum BoundBackend {
-    DNSPod(dnspod::DNSPodBackend),
+    Dnspod(dnspod::DNSPodBackend),
     Aliyun(aliyun::AliyunBackend),
 }
 
 impl Backend for BoundBackend {
     async fn do_clean(&mut self, domain: &str, proof: &str) -> Result<()> {
         match self {
-            Self::DNSPod(x) => x.do_clean(domain, proof).await,
+            Self::Dnspod(x) => x.do_clean(domain, proof).await,
             Self::Aliyun(x) => x.do_clean(domain, proof).await,
         }
     }
 
     async fn do_provision(&mut self, domain: &str, proof: &str) -> Result<()> {
         match self {
-            Self::DNSPod(x) => x.do_provision(domain, proof).await,
+            Self::Dnspod(x) => x.do_provision(domain, proof).await,
             Self::Aliyun(x) => x.do_provision(domain, proof).await,
         }
     }
@@ -56,9 +56,9 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     info!("args = {:?}", args);
 
-    let backend_type = args.backend.unwrap_or(BackendType::DNSPod);
+    let backend_type = args.backend.unwrap_or(BackendType::Dnspod);
     let mut backend = match backend_type {
-        BackendType::DNSPod => BoundBackend::DNSPod(dnspod::DNSPodBackend::new()?),
+        BackendType::Dnspod => BoundBackend::Dnspod(dnspod::DNSPodBackend::new()?),
         BackendType::Aliyun => BoundBackend::Aliyun(aliyun::AliyunBackend::new()?),
     };
 
